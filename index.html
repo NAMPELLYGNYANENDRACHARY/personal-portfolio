@@ -510,7 +510,7 @@
 
 <!-- Scripts -->
 <script>
-const WEB3FORMS_ACCESS_KEY = "";
+const WEB3FORMS_ACCESS_KEY = "16fa7f34-ce55-4e9a-ad84-143d5530f062";
 
 // ── Cursor ──
 const dot  = document.getElementById('cursorDot');
@@ -666,19 +666,40 @@ form.addEventListener('submit', async e => {
   subBtn.classList.add('loading');
   subBtn.disabled = true;
 
-  let ok = false;
-  try {
-    const res  = await fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(payload) });
-    const data = await res.json();
-    ok = data.success;
-    if (ok) { form.reset(); showToast('Message sent!', "I'll get back to you shortly.", 'success'); }
-    else showToast('Error', data.message || 'Something went wrong.', 'error');
-  } catch { showToast('Error', 'Could not reach the server.', 'error'); }
+  let web3formsSuccess = false;
 
-  if (!ok && WEB3FORMS_ACCESS_KEY) {
+  if (WEB3FORMS_ACCESS_KEY) {
     try {
-      await fetch('https://api.web3forms.com/submit', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ access_key: WEB3FORMS_ACCESS_KEY, ...payload }) });
-    } catch {}
+      const w3res = await fetch('https://api.web3forms.com/submit', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, 
+        body: JSON.stringify({ access_key: WEB3FORMS_ACCESS_KEY, ...payload }) 
+      });
+      const w3data = await w3res.json();
+      web3formsSuccess = w3data.success;
+    } catch (e) {
+      console.error("Web3Forms error:", e);
+    }
+  }
+
+  let localSuccess = false;
+  try {
+    const res  = await fetch('/api/contact', { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, 
+      body: JSON.stringify(payload) 
+    });
+    const data = await res.json();
+    localSuccess = data.success;
+  } catch { 
+    console.error("Local API error");
+  }
+
+  if (web3formsSuccess || localSuccess) { 
+    form.reset(); 
+    showToast('Message sent!', "I'll get back to you shortly.", 'success'); 
+  } else { 
+    showToast('Error', 'Could not send message. Please try again.', 'error'); 
   }
   subBtn.classList.remove('loading');
   subBtn.disabled = false;
